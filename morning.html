@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台中捷運小車長 - 晨間任務</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #f4f8ff; 
+            margin: 0;
+            padding: 15px;
+            display: block;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .header-banner {
+            background-color: #2196F3; 
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        /* 倒數計時區 */
+        .timer-box {
+            background: #fff8e1;
+            border: 2px solid #ffe082;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .current-task-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e65100;
+            margin-bottom: 8px;
+        }
+        .countdown {
+            font-size: 54px;
+            font-weight: bold;
+            font-family: monospace, sans-serif;
+            color: #222;
+            margin: 5px 0;
+        }
+        .countdown.warning {
+            color: #d32f2f;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.4; }
+        }
+        /* 按鈕調整 */
+        .btn-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        button {
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            padding: 12px 20px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .btn-start { background: #4CAF50; color: white; flex: 1; }
+        .btn-pause { background: #ff9800; color: white; flex: 1; }
+        .btn-complete { background: #2196F3; color: white; width: 100%; font-size: 20px; padding: 15px; border-radius: 12px; margin-top: 5px; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
+        
+        /* 捷運路線圖區 */
+        .route-map {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 0 15px 15px 15px; 
+            text-align: left;
+            max-height: 350px; 
+            overflow-y: auto;
+            scroll-behavior: auto; /* 交給 JS 控制平滑或瞬間滾動 */
+        }
+        .route-title {
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #ccc;
+            padding-top: 15px; 
+            padding-bottom: 5px;
+            position: sticky;
+            top: 0;
+            background: #fafafa;
+            z-index: 10;
+        }
+        .station-list {
+            position: relative;
+            padding-left: 25px;
+            padding-bottom: 10px;
+        }
+        .station-list::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 10px;
+            bottom: 10px;
+            width: 4px;
+            background: #a5d6a7;
+        }
+        .station-item {
+            position: relative;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: #999;
+            display: flex;
+            align-items: center;
+        }
+        .station-dot {
+            position: absolute;
+            left: -22px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #a5d6a7;
+            border-radius: 50%;
+        }
+        /* 狀態樣式 */
+        .station-item.passed {
+            color: #4CAF50;
+        }
+        .station-item.passed .station-dot {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+        .station-item.active {
+            color: #1b5e20;
+            font-weight: bold;
+            font-size: 17px;
+        }
+        .station-item.active .station-dot {
+            background: #1b5e20;
+            border-color: #1b5e20;
+            box-shadow: 0 0 8px rgba(27,94,32,0.5);
+        }
+        .train-emoji {
+            margin-left: 8px;
+            display: none;
+            font-size: 16px;
+        }
+        .station-item.active .train-emoji {
+            display: inline;
+            animation: moveTrain 0.6s infinite alternate ease-in-out;
+        }
+        @keyframes moveTrain {
+            from { transform: translateX(0); }
+            to { transform: translateX(4px); }
+        }
+        
+        /* 底部功能區排版 */
+        .action-area {
+            margin-top: 20px;
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+        }
+        
+        .btn-bonus-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .btn-bonus {
+            color: white;
+            font-size: 16px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            display: block;
+            width: 100%;
+        }
+        .btn-bonus-1 {
+            background: #ff5252;
+            box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
+        }
+        .btn-bonus-2 {
+            background: #ff9800;
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .bottom-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-reset, .btn-share {
+            flex: 1;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 0;
+        }
+        .btn-reset { background: #e0e0e0; color: #333; }
+        .btn-share { background: #9c27b0; color: white; }
+
+        /* 通關慶祝畫面 */
+        .celebration {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 999;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            text-align: center;
+        }
+        .celebration h2 { color: #ffeb3b; font-size: 32px; margin-bottom: 10px; }
+        .celebration p { font-size: 18px; line-height: 1.6; margin-bottom: 20px; }
+        .btn-restart { background: #ffeb3b; color: #333; font-size: 18px; padding: 12px 30px; }
+        
+        /* 自訂彈窗樣式 */
+        .custom-alert {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .alert-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .alert-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #d32f2f; }
+        .alert-msg { font-size: 16px; color: #555; line-height: 1.5; margin-bottom: 20px; }
+        .alert-btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-banner">☀️ 捷運小車長：早安出發 ☀️</div>
+    
+    <div class="timer-box" id="timerSection">
+        <div class="current-task-name" id="taskName">準備出發！</div>
+        <div class="countdown" id="timeDisplay">00:00</div>
+        
+        <div class="btn-row">
+            <button class="btn-start" id="startBtn" onclick="toggleTimer()">開始計時</button>
+            <button class="btn-pause" id="pauseBtn" onclick="pauseTimer()" style="display:none;">暫停</button>
+        </div>
+        <button class="btn-complete" id="completeBtn" onclick="completeTask()">任務完成！</button>
+    </div>
+    
+    <div class="route-map" id="mapContainer">
+        <div class="route-title">捷運綠線全線圖</div>
+        <div class="station-list" id="stationListContainer">
+            </div>
+    </div>
+    
+    <div class="action-area">
+        <div class="btn-bonus-group">
+            <button class="btn-bonus btn-bonus-1" onclick="applyBonus(1)">🌟 加碼 1 站 (如：乖乖吃藥)</button>
+            <button class="btn-bonus btn-bonus-2" onclick="applyBonus(2)">🚀 加碼 2 站 (如：自己擦屁股/主動尿尿)</button>
+        </div>
+        
+        <div class="bottom-btn-group">
+            <button class="btn-reset" onclick="resetGame(true)">🔄 重設任務</button>
+            <button class="btn-share" onclick="copyShareLink()">🔗 傳送進度</button>
+        </div>
+    </div>
+</div>
+
+<div class="celebration" id="victoryScreen">
+    <h2>🎉 早晨任務全數達成！ 🎉</h2>
+    <p id="victoryMsg"></p>
+    <div style="font-size: 60px; margin-bottom: 20px;">🎒 🏫 🚇</div>
+    <button class="btn-restart" onclick="resetGame(true)">準備開心去上學！</button>
+</div>
+
+<div class="custom-alert" id="customAlert">
+    <div class="alert-box">
+        <div class="alert-title" id="alertTitle">提示</div>
+        <div class="alert-msg" id="alertMsg">訊息</div>
+        <button class="alert-btn" onclick="closeAlert()">我知道了！</button>
+    </div>
+</div>
+
+<script>
+    const tasks = [
+        { name: "上廁所 + 捲尿布", duration: 5 * 60 },
+        { name: "吃早餐", duration: 20 * 60 },
+        { name: "收碗、擦桌子", duration: 5 * 60 },
+        { name: "大便", duration: 10 * 60 },
+        { name: "刷牙、洗臉", duration: 5 * 60 },
+        { name: "換衣服", duration: 5 * 60 },
+        { name: "收書包", duration: 5 * 60 }
+    ];
+
+    const stations = [
+        "高鐵臺中站", "烏日", "九德", "九張犁", "大慶", 
+        "豐樂公園", "南屯", "文心森林公園", "水安宮", "市政府", 
+        "文心櫻花", "文華高中", "文心中清", "文心崇德", "四維國小", 
+        "松竹", "舊社", "北屯總站"
+    ];
+
+    let currentStation = 0;   
+    let currentTaskIndex = 0; 
+    let timeLeft = 0;
+    let timerInterval = null;
+    let isRunning = false;
+    let endTime = 0; 
+
+    window.onload = function() {
+        checkUrlParams();
+        renderRouteMap();
+        // 初始載入時，瞬間滾動到底部起點，避免畫面滑動太長造成眼花
+        updateUI(true);
+    };
+
+    function renderRouteMap() {
+        const container = document.getElementById("stationListContainer");
+        container.innerHTML = "";
+        
+        // ⭐ 改為反向迴圈渲染：讓終點(北屯)在上面，起點(高鐵)在下面
+        for (let index = stations.length - 1; index >= 0; index--) {
+            const station = stations[index];
+            const item = document.createElement("div");
+            item.className = "station-item";
+            item.id = `station-${index}`;
+            
+            let suffix = "";
+            if (index === 0) suffix = " (起點)";
+            if (index === stations.length - 1) suffix = " (終點站)";
+            
+            item.innerHTML = `<div class="station-dot"></div><span>${station}${suffix}</span><span class="train-emoji">🚋💨</span>`;
+            container.appendChild(item);
+        }
+    }
+
+    function checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const s = urlParams.get('station');
+        const t = urlParams.get('task');
+        if (s !== null && t !== null) {
+            currentStation = parseInt(s, 10);
+            currentTaskIndex = parseInt(t, 10);
+        } else {
+            loadProgress(); 
+        }
+    }
+
+    function copyShareLink() {
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?station=${currentStation}&task=${currentTaskIndex}`;
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert("連結已複製！現在可以傳給隊友，點開就會接續目前的進度喔！");
+        }).catch(err => {
+            prompt("請手動複製以下網址傳給神隊友：", shareUrl);
+        });
+    }
+
+    function updateUI(instantScroll = false) {
+        stations.forEach((_, index) => {
+            const el = document.getElementById(`station-${index}`);
+            if (!el) return;
+            el.className = "station-item";
+            if (index < currentStation) {
+                el.classList.add("passed");
+            } else if (index === currentStation) {
+                el.classList.add("active");
+            }
+        });
+
+        // ⭐ 控制向上平滑捲動
+        const mapEl = document.getElementById("mapContainer");
+        const activeStationEl = document.getElementById(`station-${currentStation}`);
+        
+        if (mapEl && activeStationEl) {
+            const elementRect = activeStationEl.getBoundingClientRect();
+            const containerRect = mapEl.getBoundingClientRect();
+            const offset = (elementRect.top - containerRect.top) - (mapEl.clientHeight / 2) + (elementRect.height / 2);
+            
+            mapEl.scrollBy({
+                top: offset,
+                behavior: instantScroll ? 'auto' : 'smooth'
+            });
+        }
+
+        if (currentTaskIndex >= tasks.length) {
+            clearInterval(timerInterval);
+            showVictoryScreen();
+            return;
+        } else {
+            document.getElementById("victoryScreen").style.display = "none";
+            document.getElementById("timerSection").style.display = "block";
+        }
+
+        const currentTask = tasks[currentTaskIndex];
+        
+        let nextStationName = "終點站";
+        if (currentStation + 1 < stations.length) {
+            nextStationName = stations[currentStation + 1] + "站";
+        }
+
+        document.getElementById("taskName").innerHTML = `<b>目前停靠：</b>${stations[currentStation]}站<br><span style="font-size:15px; color:#555;">(下一站目標：${nextStationName})</span><br><br>🎯 第 ${currentTaskIndex + 1} 關：${currentTask.name}`;
+        
+        if (!isRunning) {
+            timeLeft = currentTask.duration;
+            displayTime(timeLeft);
+            document.getElementById("startBtn").style.display = "inline-block";
+            document.getElementById("startBtn").innerText = "開始計時";
+            document.getElementById("pauseBtn").style.display = "none";
+            document.getElementById("timeDisplay").classList.remove("warning");
+        }
+    }
+
+    function showVictoryScreen() {
+        document.getElementById("victoryScreen").style.display = "flex";
+        document.getElementById("timerSection").style.display = "none";
+        playSound('victory');
+        
+        let msg = `早上的出門準備順利完成啦！<br><br>小車長今天表現一級棒，把捷運開到了<br><span style='font-size: 28px; color: #4CAF50; font-weight: bold; background: white; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-top: 10px;'>🚉 ${stations[currentStation]}站</span>！<br><br>`;
+        
+        if (currentStation >= stations.length - 1) {
+            msg += `哇！真的飆到了終點站 北屯總站！<br>你是今天的超級特快車！`;
+        } else {
+            msg += `出門不遲到就是最棒的！<br>我們現在可以開心地出門上學囉！`;
+        }
+        document.getElementById("victoryMsg").innerHTML = msg;
+    }
+
+    function displayTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById("timeDisplay").innerText = `${m}:${s}`;
+    }
+
+    function toggleTimer() {
+        if (isRunning) return;
+        playSound('start');
+        isRunning = true;
+        document.getElementById("startBtn").style.display = "none";
+        document.getElementById("pauseBtn").style.display = "inline-block";
+        
+        endTime = Date.now() + timeLeft * 1000;
+        
+        timerInterval = setInterval(() => {
+            let now = Date.now();
+            timeLeft = Math.round((endTime - now) / 1000);
+
+            if (timeLeft > 0) {
+                displayTime(timeLeft);
+                if (timeLeft <= 30) { 
+                    document.getElementById("timeDisplay").classList.add("warning");
+                }
+            } else {
+                timeLeft = 0;
+                displayTime(0);
+                clearInterval(timerInterval);
+                document.getElementById("timeDisplay").innerText = "時間到!";
+                playSound('fail');
+            }
+        }, 200); 
+    }
+
+    function pauseTimer() {
+        clearInterval(timerInterval);
+        isRunning = false;
+        playSound('pause'); 
+        document.getElementById("startBtn").style.display = "inline-block";
+        document.getElementById("startBtn").innerText = "繼續前進";
+        document.getElementById("pauseBtn").style.display = "none";
+    }
+
+    function completeTask() {
+        clearInterval(timerInterval);
+        isRunning = false;
+        
+        const currentTask = tasks[currentTaskIndex];
+        const halfTime = currentTask.duration / 2; 
+        
+        if (timeLeft > halfTime) {
+            playSound('victory'); 
+            showAlert("⚡ 特快車啟動！", "動作超迅速！花不到一半的時間就完成，捷運將直接前進 2 站！", "#ff9800");
+            currentStation += 2; 
+        } else if (timeLeft > 0) {
+            playSound('success');
+            currentStation += 1; 
+            updateGameState(); 
+            return; 
+        } else {
+            playSound('success'); 
+            showAlert("⏳ 列車停靠休息", "這次稍微超時了，所以捷運暫停在原地沒有前進。<br><br><b>但沒關係，你有堅持把任務做完，很棒！</b><br>下一關我們用「特快車」把它追回來！💪", "#d32f2f");
+        }
+
+        updateGameState();
+    }
+
+    function applyBonus(stationsToAdd) {
+        if (currentStation >= stations.length - 1) {
+            showAlert("已經抵達終點！", "小車長已經到達北屯總站囉！準備開心出門！", "#4CAF50");
+            return;
+        }
+        playSound('bonus');
+        
+        if (stationsToAdd === 1) {
+            showAlert("🎁 驚喜加碼！", "哇！獲得了驚喜獎勵（例如：乖乖吃藥），捷運前進 1 站！", "#e91e63");
+        } else if (stationsToAdd === 2) {
+            showAlert("🚀 超級加碼！", "太厲害了吧！（例如：自己擦屁股、起床就去尿馬桶）獲得超級獎勵，捷運直線狂飆前進 2 站！", "#ff9800");
+        }
+        
+        currentStation += stationsToAdd;
+        
+        if (currentStation >= stations.length - 1) {
+            currentStation = stations.length - 1;
+        }
+        saveProgress();
+        updateUI();
+    }
+
+    function updateGameState() {
+        if (currentStation >= stations.length - 1) {
+            currentStation = stations.length - 1; 
+        }
+        currentTaskIndex += 1; 
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        updateUI();
+    }
+
+    function showAlert(title, msg, titleColor) {
+        document.getElementById("alertTitle").innerText = title;
+        document.getElementById("alertTitle").style.color = titleColor;
+        document.getElementById("alertMsg").innerHTML = msg;
+        document.getElementById("customAlert").style.display = "flex";
+    }
+
+    function closeAlert() {
+        document.getElementById("customAlert").style.display = "none";
+    }
+
+    function resetGame(askConfirm) {
+        if (askConfirm && !confirm("確定要重新啟動捷運，回到高鐵臺中站並重設所有任務嗎？")) {
+            return;
+        }
+        clearInterval(timerInterval);
+        currentStation = 0;      
+        currentTaskIndex = 0;    
+        isRunning = false;
+        timeLeft = tasks[0].duration;
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        updateUI(true); // 傳入 true 讓重設時瞬間回到下方，不滑動
+    }
+
+    function saveProgress() {
+        localStorage.setItem("mrt_game_morning_station", currentStation);
+        localStorage.setItem("mrt_game_morning_task", currentTaskIndex);
+    }
+
+    function loadProgress() {
+        const savedStation = localStorage.getItem("mrt_game_morning_station");
+        const savedTask = localStorage.getItem("mrt_game_morning_task");
+        if (savedStation !== null && savedTask !== null) {
+            currentStation = parseInt(savedStation, 10);
+            currentTaskIndex = parseInt(savedTask, 10);
+            
+            if (currentStation >= stations.length) currentStation = stations.length - 1;
+            if (currentTaskIndex > tasks.length) currentTaskIndex = 0;
+        }
+    }
+
+    function playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            if (type === 'start') {
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.15); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'success') {
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12); 
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.24); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } else if (type === 'fail') {
+                osc.frequency.setValueAtTime(349.23, ctx.currentTime); 
+                osc.frequency.setValueAtTime(293.66, ctx.currentTime + 0.15); 
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } else if (type === 'victory') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.6);
+            } else if (type === 'bonus') {
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); 
+                osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); 
+                osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.2); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } else if (type === 'pause') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440.00, ctx.currentTime); 
+                osc.frequency.setValueAtTime(349.23, ctx.currentTime + 0.1); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.2);
+            }
+        } catch (e) {
+            console.log("Audio not supported or blocked by browser");
+        }
+    }
+</script>
+
+</body>
+</html>
