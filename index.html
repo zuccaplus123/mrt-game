@@ -86,12 +86,13 @@
         .btn-pause { background: #ff9800; color: white; flex: 1; }
         .btn-complete { background: #2196F3; color: white; width: 100%; font-size: 20px; padding: 15px; border-radius: 12px; margin-top: 5px; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
         
-        /* 捷運路線圖區 */
+        /* 捷運路線圖區 (修正了標題重疊問題) */
         .route-map {
             background: #fafafa;
             border: 1px solid #e0e0e0;
             border-radius: 15px;
-            padding: 15px;
+            /* 把上方 padding 設為 0，避免滾動內容從上方漏出 */
+            padding: 0 15px 15px 15px; 
             text-align: left;
             max-height: 350px; 
             overflow-y: auto;
@@ -103,6 +104,8 @@
             font-weight: bold;
             margin-bottom: 10px;
             border-bottom: 1px dashed #ccc;
+            /* 將 padding 移到標題內，確保背景顏色能完全覆蓋 */
+            padding-top: 15px; 
             padding-bottom: 5px;
             position: sticky;
             top: 0;
@@ -171,15 +174,45 @@
             to { transform: translateX(4px); }
         }
         
-        .btn-reset {
-            background: #e0e0e0;
-            color: #666;
-            font-size: 12px;
-            padding: 5px 10px;
-            margin-top: 15px;
-            border-radius: 5px;
+        /* 底部功能區排版 */
+        .action-area {
+            margin-top: 20px;
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+        }
+        .btn-bonus {
+            background: #ff5252;
+            color: white;
+            font-size: 16px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
         
+        .bottom-btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-reset, .btn-share {
+            flex: 1;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 0;
+        }
+        .btn-reset { background: #e0e0e0; color: #333; }
+        .btn-share { background: #9c27b0; color: white; }
+
         /* 通關慶祝畫面 */
         .celebration {
             display: none;
@@ -244,7 +277,14 @@
             </div>
     </div>
     
-    <button class="btn-reset" onclick="resetGame(true)">重設遊戲 (新的一天)</button>
+    <div class="action-area">
+        <button class="btn-bonus" onclick="bonusStation()">🌟 表現超棒！驚喜加碼 1 站</button>
+        
+        <div class="bottom-btn-group">
+            <button class="btn-reset" onclick="resetGame(true)">🔄 重設任務</button>
+            <button class="btn-share" onclick="copyShareLink()">🔗 傳送進度</button>
+        </div>
+    </div>
 </div>
 
 <div class="celebration" id="victoryScreen">
@@ -263,20 +303,20 @@
 </div>
 
 <script>
-    // 任務與時間設定
+    // 包含 noExpress 防止過快與睡覺任務的最新設定
     const tasks = [
         { name: "拿衣服 + 洗澡", duration: 15 * 60 },
         { name: "擦身體 + 穿衣服", duration: 5 * 60 },
-        { name: "吃飯", duration: 40 * 60 },
+        { name: "吃飯", duration: 40 * 60, noExpress: true }, 
         { name: "收碗 + 擦桌子", duration: 5 * 60 },
-        { name: "吃水果", duration: 10 * 60 },
+        { name: "吃水果", duration: 10 * 60, noExpress: true },
         { name: "收碗、擦桌子 2", duration: 5 * 60 },
         { name: "收書包", duration: 5 * 60 },
         { name: "刷牙 + 爸媽加強 + 尿尿", duration: 8 * 60 },
-        { name: "換衣服", duration: 5 * 60 }
+        { name: "換衣服", duration: 5 * 60 },
+        { name: "睡覺", duration: 10 * 60 } 
     ];
 
-    // 台中捷運綠線完整 18 站
     const stations = [
         "北屯總站", "舊社", "松竹", "四維國小", "文心崇德", 
         "文心中清", "文華高中", "文心櫻花", "市政府", "水安宮", 
@@ -289,9 +329,10 @@
     let timeLeft = 0;
     let timerInterval = null;
     let isRunning = false;
+    let endTime = 0; 
 
     window.onload = function() {
-        loadProgress();
+        checkUrlParams();
         renderRouteMap();
         updateUI();
     };
@@ -312,15 +353,7 @@
             container.appendChild(item);
         });
     }
-  
-    window.onload = function() {
-        // ⭐ 修改：初始化時先檢查網址有沒有參數
-        checkUrlParams();
-        renderRouteMap();
-        updateUI();
-    };
 
-    // ⭐ 新增：讀取網址參數
     function checkUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         const s = urlParams.get('station');
@@ -329,19 +362,21 @@
             currentStation = parseInt(s, 10);
             currentTaskIndex = parseInt(t, 10);
         } else {
-            loadProgress(); // 若沒有參數，才讀取本地儲存
+            loadProgress(); 
         }
     }
 
-    // ⭐ 新增：產生分享連結
     function copyShareLink() {
         const baseUrl = window.location.origin + window.location.pathname;
         const shareUrl = `${baseUrl}?station=${currentStation}&task=${currentTaskIndex}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("連結已複製！現在可以傳給隊友，他點開就會是目前的進度喔！");
+            alert("連結已複製！現在可以傳給隊友，點開就會接續目前的進度喔！");
+        }).catch(err => {
+            prompt("請手動複製以下網址傳給神隊友：", shareUrl);
         });
     }
+
     function updateUI() {
         stations.forEach((_, index) => {
             const el = document.getElementById(`station-${index}`);
@@ -410,23 +445,30 @@
 
     function toggleTimer() {
         if (isRunning) return;
+        playSound('start'); // 播放開始音效
         isRunning = true;
         document.getElementById("startBtn").style.display = "none";
         document.getElementById("pauseBtn").style.display = "inline-block";
         
+        endTime = Date.now() + timeLeft * 1000;
+        
         timerInterval = setInterval(() => {
+            let now = Date.now();
+            timeLeft = Math.round((endTime - now) / 1000);
+
             if (timeLeft > 0) {
-                timeLeft--;
                 displayTime(timeLeft);
-                if (timeLeft <= 30 && timeLeft > 0) { 
+                if (timeLeft <= 30) { 
                     document.getElementById("timeDisplay").classList.add("warning");
                 }
             } else {
+                timeLeft = 0;
+                displayTime(0);
                 clearInterval(timerInterval);
                 document.getElementById("timeDisplay").innerText = "時間到!";
                 playSound('fail');
             }
-        }, 1000);
+        }, 200); 
     }
 
     function pauseTimer() {
@@ -437,7 +479,6 @@
         document.getElementById("pauseBtn").style.display = "none";
     }
 
-    // ⭐ 失敗與加速機制判定
     function completeTask() {
         clearInterval(timerInterval);
         isRunning = false;
@@ -445,38 +486,58 @@
         const currentTask = tasks[currentTaskIndex];
         const halfTime = currentTask.duration / 2; 
         
-        if (timeLeft > halfTime) {
-            // 超前完成：加速2站
+        if (timeLeft > halfTime && !currentTask.noExpress) {
             playSound('victory'); 
             showAlert("⚡ 特快車啟動！", "太快了！花不到一半的時間就完成，捷運將直接前進 2 站！", "#ff9800");
             currentStation += 2; 
+        } else if (timeLeft > halfTime && currentTask.noExpress) {
+            playSound('success');
+            showAlert("🍲 慢慢享受時間", "這關規定要好好享受，不能趕時間喔！恭喜過關，捷運穩定前進 1 站！", "#4CAF50");
+            currentStation += 1;
         } else if (timeLeft > 0) {
-            // 正常完成：前進1站
             playSound('success');
             currentStation += 1; 
-            updateGameState(); // 正常情況不跳視窗，直接更新
+            updateGameState(); 
             return; 
         } else {
-            // 超時失敗：停在原地
-            playSound('success'); // 雖然超時，但完成任務還是給予正面音效回饋
+            playSound('success'); 
             showAlert("⏳ 列車停靠休息", "這次稍微超時了，所以捷運暫時停在原地沒有前進。<br><br><b>但是沒關係！你有堅持把任務做完，非常棒！</b><br>失敗了沒關係，後面的關卡還有機會可以靠「特快車」追回來，我們繼續挑戰下一關！💪", "#d32f2f");
-            // currentStation 不加數字，停在原地
         }
 
         updateGameState();
     }
 
-    // 更新遊戲狀態與存檔
+    // 新增：Bonus 獎勵機制
+    function bonusStation() {
+        if (currentStation >= stations.length - 1) {
+            showAlert("已經抵達終點！", "小車長已經到達高鐵臺中站囉！不用再加碼了，你超棒！", "#4CAF50");
+            return;
+        }
+        playSound('bonus');
+        showAlert("🎁 驚喜加碼！", "哇！小車長表現太棒了（例如：主動幫忙、乖乖吃藥）！獲得特別獎勵，捷運無條件前進 1 站！", "#e91e63");
+        currentStation += 1;
+        
+        // 確保不會超過最後一站
+        if (currentStation >= stations.length - 1) {
+            currentStation = stations.length - 1;
+        }
+        saveProgress();
+        updateUI();
+    }
+
     function updateGameState() {
         if (currentStation >= stations.length - 1) {
             currentStation = stations.length - 1; 
         }
         currentTaskIndex += 1; 
         saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
         updateUI();
     }
 
-    // 自訂訊息彈窗控制
     function showAlert(title, msg, titleColor) {
         document.getElementById("alertTitle").innerText = title;
         document.getElementById("alertTitle").style.color = titleColor;
@@ -498,6 +559,10 @@
         isRunning = false;
         timeLeft = tasks[0].duration;
         saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
         updateUI();
         
         const mapEl = document.getElementById("mapContainer");
@@ -529,7 +594,14 @@
             osc.connect(gain);
             gain.connect(ctx.destination);
             
-            if (type === 'success') {
+            if (type === 'start') {
+                // 發車啟動音效 (清脆的上揚音)
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.15); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'success') {
                 osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
                 osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12); 
                 osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.24); 
@@ -551,6 +623,14 @@
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.6);
+            } else if (type === 'bonus') {
+                // Bonus專屬閃亮音效
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); // A5
+                osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.2); // D6
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
             }
         } catch (e) {
             console.log("Audio not supported or blocked by browser");
