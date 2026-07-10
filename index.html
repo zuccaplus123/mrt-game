@@ -86,12 +86,11 @@
         .btn-pause { background: #ff9800; color: white; flex: 1; }
         .btn-complete { background: #2196F3; color: white; width: 100%; font-size: 20px; padding: 15px; border-radius: 12px; margin-top: 5px; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
         
-        /* 捷運路線圖區 (修正了標題重疊問題) */
+        /* 捷運路線圖區 */
         .route-map {
             background: #fafafa;
             border: 1px solid #e0e0e0;
             border-radius: 15px;
-            /* 把上方 padding 設為 0，避免滾動內容從上方漏出 */
             padding: 0 15px 15px 15px; 
             text-align: left;
             max-height: 350px; 
@@ -104,7 +103,6 @@
             font-weight: bold;
             margin-bottom: 10px;
             border-bottom: 1px dashed #ccc;
-            /* 將 padding 移到標題內，確保背景顏色能完全覆蓋 */
             padding-top: 15px; 
             padding-bottom: 5px;
             position: sticky;
@@ -303,7 +301,7 @@
 </div>
 
 <script>
-    // 包含 noExpress 防止過快與睡覺任務的最新設定
+    // 包含防過快與睡覺任務的設定
     const tasks = [
         { name: "拿衣服 + 洗澡", duration: 15 * 60 },
         { name: "擦身體 + 穿衣服", duration: 5 * 60 },
@@ -389,9 +387,19 @@
             }
         });
 
+        // 取代原本會連帶牽動主畫面的 scrollIntoView，改為容器內精準滾動
+        const mapEl = document.getElementById("mapContainer");
         const activeStationEl = document.getElementById(`station-${currentStation}`);
-        if(activeStationEl) {
-            activeStationEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        
+        if (mapEl && activeStationEl) {
+            const elementRect = activeStationEl.getBoundingClientRect();
+            const containerRect = mapEl.getBoundingClientRect();
+            const offset = (elementRect.top - containerRect.top) - (mapEl.clientHeight / 2) + (elementRect.height / 2);
+            
+            mapEl.scrollBy({
+                top: offset,
+                behavior: 'smooth'
+            });
         }
 
         if (currentTaskIndex >= tasks.length) {
@@ -445,7 +453,7 @@
 
     function toggleTimer() {
         if (isRunning) return;
-        playSound('start'); // 播放開始音效
+        playSound('start');
         isRunning = true;
         document.getElementById("startBtn").style.display = "none";
         document.getElementById("pauseBtn").style.display = "inline-block";
@@ -474,6 +482,7 @@
     function pauseTimer() {
         clearInterval(timerInterval);
         isRunning = false;
+        playSound('pause'); // 新增的暫停音效
         document.getElementById("startBtn").style.display = "inline-block";
         document.getElementById("startBtn").innerText = "繼續前進";
         document.getElementById("pauseBtn").style.display = "none";
@@ -507,17 +516,15 @@
         updateGameState();
     }
 
-    // 新增：Bonus 獎勵機制
     function bonusStation() {
         if (currentStation >= stations.length - 1) {
             showAlert("已經抵達終點！", "小車長已經到達高鐵臺中站囉！不用再加碼了，你超棒！", "#4CAF50");
             return;
         }
         playSound('bonus');
-        showAlert("🎁 驚喜加碼！", "哇！小車長表現太棒了（例如：主動幫忙、乖乖吃藥）！獲得特別獎勵，捷運無條件前進 1 站！", "#e91e63");
+        showAlert("🎁 驚喜加碼！", "哇！小車長表現太棒了！獲得特別獎勵，捷運無條件前進 1 站！", "#e91e63");
         currentStation += 1;
         
-        // 確保不會超過最後一站
         if (currentStation >= stations.length - 1) {
             currentStation = stations.length - 1;
         }
@@ -595,7 +602,6 @@
             gain.connect(ctx.destination);
             
             if (type === 'start') {
-                // 發車啟動音效 (清脆的上揚音)
                 osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
                 osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.15); 
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
@@ -624,13 +630,20 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.6);
             } else if (type === 'bonus') {
-                // Bonus專屬閃亮音效
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-                osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); // A5
-                osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.2); // D6
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); 
+                osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); 
+                osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.2); 
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.4);
+            } else if (type === 'pause') {
+                // 暫停音效：一個簡單短促的雙降音
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440.00, ctx.currentTime); 
+                osc.frequency.setValueAtTime(349.23, ctx.currentTime + 0.1); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.2);
             }
         } catch (e) {
             console.log("Audio not supported or blocked by browser");
