@@ -211,16 +211,17 @@
         
         .bottom-btn-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
         }
-        .btn-reset, .btn-share {
+        .btn-setting, .btn-reset, .btn-share {
             flex: 1;
             font-size: 14px;
-            padding: 10px;
+            padding: 10px 5px;
             border-radius: 8px;
             margin: 0;
         }
+        .btn-setting { background: #607d8b; color: white; }
         .btn-reset { background: #e0e0e0; color: #333; }
         .btn-share { background: #9c27b0; color: white; }
 
@@ -259,6 +260,7 @@
             border-radius: 15px;
             text-align: center;
             max-width: 320px;
+            width: 100%;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
         .alert-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #d32f2f; }
@@ -283,7 +285,7 @@
     </div>
     
     <div class="route-map" id="mapContainer">
-        <div class="route-title">捷運綠線全線圖</div>
+        <div class="route-title">捷運綠線全線圖（高鐵 ➔ 北屯）</div>
         <div class="station-list" id="stationListContainer">
             </div>
     </div>
@@ -295,8 +297,9 @@
         </div>
         
         <div class="bottom-btn-group">
-            <button class="btn-reset" onclick="resetGame(true)">🔄 重設任務</button>
-            <button class="btn-share" onclick="copyShareLink()">🔗 傳送進度</button>
+            <button class="btn-setting" onclick="openParentSettings()">⚙️ 設定進度</button>
+            <button class="btn-reset" onclick="resetGame(true)">🔄 重設</button>
+            <button class="btn-share" onclick="copyShareLink()">🔗 傳送</button>
         </div>
     </div>
 </div>
@@ -313,6 +316,23 @@
         <div class="alert-title" id="alertTitle">提示</div>
         <div class="alert-msg" id="alertMsg">訊息</div>
         <button class="alert-btn" onclick="closeAlert()">我知道了！</button>
+    </div>
+</div>
+
+<div class="custom-alert" id="parentSettingsModal">
+    <div class="alert-box">
+        <div class="alert-title" style="color: #607d8b;">⚙️ 家長手動設定</div>
+        <div class="alert-msg" style="text-align: left; font-size: 15px; margin-bottom: 20px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">選擇目前關卡：</label>
+            <select id="parentTaskSelect" style="width:100%; padding:8px; border-radius:5px; margin-bottom:15px; font-size:16px; border:1px solid #ccc;"></select>
+            
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">選擇目前停靠站：</label>
+            <select id="parentStationSelect" style="width:100%; padding:8px; border-radius:5px; font-size:16px; border:1px solid #ccc;"></select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="alert-btn" style="background:#e0e0e0; color:#333; flex:1;" onclick="closeParentSettings()">取消</button>
+            <button class="alert-btn" style="background:#4CAF50; color:white; flex:1;" onclick="applyParentSettings()">確認修改</button>
+        </div>
     </div>
 </div>
 
@@ -344,6 +364,7 @@
     window.onload = function() {
         checkUrlParams();
         renderRouteMap();
+        initParentSettings(); // 初始化家長選單
         // 初始載入時，瞬間滾動到底部起點，避免畫面滑動太長造成眼花
         updateUI(true);
     };
@@ -352,7 +373,7 @@
         const container = document.getElementById("stationListContainer");
         container.innerHTML = "";
         
-        // ⭐ 改為反向迴圈渲染：讓終點(北屯)在上面，起點(高鐵)在下面
+        // 改為反向迴圈渲染：讓終點(北屯)在上面，起點(高鐵)在下面
         for (let index = stations.length - 1; index >= 0; index--) {
             const station = stations[index];
             const item = document.createElement("div");
@@ -366,6 +387,34 @@
             item.innerHTML = `<div class="station-dot"></div><span>${station}${suffix}</span><span class="train-emoji">🚋💨</span>`;
             container.appendChild(item);
         }
+    }
+
+    // 初始化家長設定的下拉選單內容
+    function initParentSettings() {
+        const stationSelect = document.getElementById("parentStationSelect");
+        const taskSelect = document.getElementById("parentTaskSelect");
+        
+        stationSelect.innerHTML = "";
+        taskSelect.innerHTML = "";
+        
+        stations.forEach((station, index) => {
+            let option = document.createElement("option");
+            option.value = index;
+            option.text = `${index + 1}. ${station}`;
+            stationSelect.appendChild(option);
+        });
+        
+        tasks.forEach((task, index) => {
+            let option = document.createElement("option");
+            option.value = index;
+            option.text = `第 ${index + 1} 關: ${task.name}`;
+            taskSelect.appendChild(option);
+        });
+        
+        let finishOption = document.createElement("option");
+        finishOption.value = tasks.length;
+        finishOption.text = "🏆 所有關卡已完成";
+        taskSelect.appendChild(finishOption);
     }
 
     function checkUrlParams() {
@@ -403,7 +452,7 @@
             }
         });
 
-        // ⭐ 控制向上平滑捲動
+        // 控制向上平滑或瞬間捲動
         const mapEl = document.getElementById("mapContainer");
         const activeStationEl = document.getElementById(`station-${currentStation}`);
         
@@ -561,6 +610,40 @@
         window.history.replaceState({}, document.title, newUrl);
 
         updateUI();
+    }
+
+    // --- 家長設定功能 ---
+    function openParentSettings() {
+        document.getElementById("parentTaskSelect").value = currentTaskIndex;
+        document.getElementById("parentStationSelect").value = currentStation;
+        document.getElementById("parentSettingsModal").style.display = "flex";
+    }
+
+    function closeParentSettings() {
+        document.getElementById("parentSettingsModal").style.display = "none";
+    }
+
+    function applyParentSettings() {
+        const newTask = parseInt(document.getElementById("parentTaskSelect").value, 10);
+        const newStation = parseInt(document.getElementById("parentStationSelect").value, 10);
+        
+        currentTaskIndex = newTask;
+        currentStation = newStation;
+        
+        clearInterval(timerInterval);
+        isRunning = false;
+        if (currentTaskIndex < tasks.length) {
+            timeLeft = tasks[currentTaskIndex].duration;
+        }
+        
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // 傳入 true 讓修改後畫面瞬間滾動，不會讓眼睛很花
+        updateUI(true);
+        closeParentSettings();
     }
 
     function showAlert(title, msg, titleColor) {
