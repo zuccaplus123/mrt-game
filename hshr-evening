@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣高鐵小車長 - 晚安號</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #fff8f0; /* 高鐵溫暖橘白底色 */
+            margin: 0;
+            padding: 15px;
+            display: block;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(243, 112, 33, 0.1);
+            text-align: center;
+        }
+        .header-banner {
+            background-color: #f37021; /* 高鐵標準橘色 */
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        
+        /* 任務區 (無計時器版本) */
+        .task-box {
+            background: #fff3e0;
+            border: 2px solid #ffcc80;
+            border-radius: 15px;
+            padding: 20px 15px;
+            margin-bottom: 20px;
+        }
+        .section-tag {
+            display: inline-block;
+            background: #5d4037;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .current-task-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #d84315;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .task-duration {
+            font-size: 18px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: white;
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            border: 1px dashed #ffb74d;
+        }
+        
+        /* 手動過關按鈕調整 */
+        .completion-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        button {
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            padding: 15px 20px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .btn-advance-1 {
+            background: #4CAF50; 
+            color: white; 
+            width: 100%; 
+            font-size: 18px; 
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+        }
+        .btn-advance-2 {
+            background: #f37021; 
+            color: white; 
+            width: 100%; 
+            font-size: 18px; 
+            box-shadow: 0 4px 10px rgba(243, 112, 33, 0.3);
+        }
+        
+        /* 高鐵路線圖區 */
+        .route-map {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 0 15px 15px 15px; 
+            text-align: left;
+            max-height: 350px; 
+            overflow-y: auto;
+            scroll-behavior: auto; 
+        }
+        .route-title {
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #ccc;
+            padding-top: 15px; 
+            padding-bottom: 5px;
+            position: sticky;
+            top: 0;
+            background: #fafafa;
+            z-index: 10;
+        }
+        .station-list {
+            position: relative;
+            padding-left: 25px;
+            padding-bottom: 10px;
+        }
+        .station-list::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 10px;
+            bottom: 10px;
+            width: 4px;
+            background: #ffcc80; /* 橘色軌道 */
+        }
+        .station-item {
+            position: relative;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: #999;
+            display: flex;
+            align-items: center;
+        }
+        .station-dot {
+            position: absolute;
+            left: -22px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #ffcc80;
+            border-radius: 50%;
+        }
+        /* 狀態樣式 */
+        .station-item.passed {
+            color: #f37021;
+        }
+        .station-item.passed .station-dot {
+            background: #f37021;
+            border-color: #f37021;
+        }
+        .station-item.active {
+            color: #bf360c;
+            font-weight: bold;
+            font-size: 17px;
+        }
+        .station-item.active .station-dot {
+            background: #bf360c;
+            border-color: #bf360c;
+            box-shadow: 0 0 8px rgba(191, 54, 12, 0.5);
+        }
+        .train-emoji {
+            margin-left: 8px;
+            display: none;
+            font-size: 16px;
+        }
+        .station-item.active .train-emoji {
+            display: inline;
+            animation: moveTrain 0.6s infinite alternate ease-in-out;
+        }
+        @keyframes moveTrain {
+            from { transform: translateX(0); }
+            to { transform: translateX(4px); }
+        }
+        
+        /* 底部功能區排版 */
+        .action-area {
+            margin-top: 20px;
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+        }
+        
+        .btn-bonus-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .btn-bonus {
+            color: white;
+            font-size: 16px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            display: block;
+            width: 100%;
+        }
+        .btn-bonus-1 {
+            background: #ff5252;
+            box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
+        }
+        .btn-bonus-2 {
+            background: #ff9800;
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .bottom-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .btn-setting, .btn-reset, .btn-share {
+            flex: 1;
+            font-size: 14px;
+            padding: 10px 5px;
+            border-radius: 8px;
+            margin: 0;
+        }
+        .btn-setting { background: #607d8b; color: white; }
+        .btn-reset { background: #e0e0e0; color: #333; }
+        .btn-share { background: #9c27b0; color: white; }
+
+        /* 通關慶祝畫面 */
+        .celebration {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 999;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            text-align: center;
+        }
+        .celebration h2 { color: #ffeb3b; font-size: 32px; margin-bottom: 10px; }
+        .celebration p { font-size: 18px; line-height: 1.6; margin-bottom: 20px; }
+        .btn-restart { background: #ffeb3b; color: #333; font-size: 18px; padding: 12px 30px; }
+        
+        /* 自訂彈窗樣式 */
+        .custom-alert {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .alert-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 320px;
+            width: 100%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .alert-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #d32f2f; }
+        .alert-msg { font-size: 16px; color: #555; line-height: 1.5; margin-bottom: 20px; }
+        .alert-btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-banner">🚄 台灣高鐵小車長：晚安號 🚄</div>
+    
+    <div class="task-box" id="taskSection">
+        <div class="section-tag" id="sectionTag">【阿嬤家】</div>
+        <div class="current-task-name" id="taskName">準備出發！</div>
+        <div class="task-duration" id="taskTime">預計時間：-- 分鐘</div>
+        
+        <div class="completion-buttons">
+            <button class="btn-advance-1" onclick="completeTask(1)">✅ 順利過關 (前進 1 站)</button>
+            <button class="btn-advance-2" onclick="completeTask(2)">⚡ 表現超棒！ (前進 2 站)</button>
+        </div>
+    </div>
+    
+    <div class="route-map" id="mapContainer">
+        <div class="route-title">高鐵全線圖（左營 ➔ 南港）</div>
+        <div class="station-list" id="stationListContainer">
+            </div>
+    </div>
+    
+    <div class="action-area">
+        <div class="btn-bonus-group">
+            <button class="btn-bonus btn-bonus-1" onclick="applyBonus(1)">🌟 加碼 1 站 (如：主動幫忙)</button>
+            <button class="btn-bonus btn-bonus-2" onclick="applyBonus(2)">🚀 加碼 2 站 (如：特別優秀)</button>
+        </div>
+        
+        <div class="bottom-btn-group">
+            <button class="btn-setting" onclick="openParentSettings()">⚙️ 設定進度</button>
+            <button class="btn-reset" onclick="resetGame(true)">🔄 重設</button>
+            <button class="btn-share" onclick="copyShareLink()">🔗 傳送</button>
+        </div>
+    </div>
+</div>
+
+<div class="celebration" id="victoryScreen">
+    <h2>🎉 今日高鐵任務達成！ 🎉</h2>
+    <p id="victoryMsg"></p>
+    <div style="font-size: 60px; margin-bottom: 20px;">🚄 🌙 🛌</div>
+    <button class="btn-restart" onclick="resetGame(true)">重置地圖，明天再挑戰！</button>
+</div>
+
+<!-- 系統提示彈窗 -->
+<div class="custom-alert" id="customAlert">
+    <div class="alert-box">
+        <div class="alert-title" id="alertTitle">提示</div>
+        <div class="alert-msg" id="alertMsg">訊息</div>
+        <button class="alert-btn" onclick="closeAlert()">我知道了！</button>
+    </div>
+</div>
+
+<!-- 家長設定專屬彈窗 -->
+<div class="custom-alert" id="parentSettingsModal">
+    <div class="alert-box">
+        <div class="alert-title" style="color: #607d8b;">⚙️ 家長手動設定</div>
+        <div class="alert-msg" style="text-align: left; font-size: 15px; margin-bottom: 20px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">選擇目前關卡：</label>
+            <select id="parentTaskSelect" style="width:100%; padding:8px; border-radius:5px; margin-bottom:15px; font-size:16px; border:1px solid #ccc;"></select>
+            
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">選擇目前停靠站：</label>
+            <select id="parentStationSelect" style="width:100%; padding:8px; border-radius:5px; font-size:16px; border:1px solid #ccc;"></select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="alert-btn" style="background:#e0e0e0; color:#333; flex:1;" onclick="closeParentSettings()">取消</button>
+            <button class="alert-btn" style="background:#4CAF50; color:white; flex:1;" onclick="applyParentSettings()">確認修改</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 高鐵版任務設定，加入了 section 和 timeText
+    const tasks = [
+        { name: "拿衣服 + 洗澡", timeText: "15 分鐘", section: "阿嬤家" },
+        { name: "擦乾 + 穿衣服 + 吹頭髮", timeText: "10 分鐘", section: "阿嬤家" },
+        { name: "吃飯 + 收桌子", timeText: "30 分鐘", section: "阿嬤家" },
+        { name: "吃水果", timeText: "10 分鐘", section: "阿嬤家" },
+        { name: "收盤子 + 擰抹布 + 擦桌子", timeText: "8 分鐘", section: "阿嬤家" },
+        { name: "收書包", timeText: "5 分鐘", section: "回家" },
+        { name: "刷牙 + 加強 + 尿尿", timeText: "8 分鐘", section: "回家" },
+        { name: "換衣服", timeText: "5 分鐘", section: "回家" }
+    ];
+
+    // 高鐵 12 站 (南到北)
+    const stations = [
+        "左營", "台南", "嘉義", "雲林", "彰化", "台中",
+        "苗栗", "新竹", "桃園", "板橋", "台北", "南港"
+    ];
+
+    let currentStation = 0;   
+    let currentTaskIndex = 0; 
+
+    window.onload = function() {
+        checkUrlParams();
+        renderRouteMap();
+        initParentSettings(); 
+        // 初始載入時，瞬間滾動到底部起點 (左營)
+        updateUI(true);
+    };
+
+    function renderRouteMap() {
+        const container = document.getElementById("stationListContainer");
+        container.innerHTML = "";
+        
+        // 反向迴圈渲染：南港在上面，左營在下面
+        for (let index = stations.length - 1; index >= 0; index--) {
+            const station = stations[index];
+            const item = document.createElement("div");
+            item.className = "station-item";
+            item.id = `station-${index}`;
+            
+            let suffix = "";
+            if (index === 0) suffix = " (起點)";
+            if (index === stations.length - 1) suffix = " (終點站)";
+            
+            item.innerHTML = `<div class="station-dot"></div><span>${station}${suffix}</span><span class="train-emoji">🚄💨</span>`;
+            container.appendChild(item);
+        }
+    }
+
+    function initParentSettings() {
+        const stationSelect = document.getElementById("parentStationSelect");
+        const taskSelect = document.getElementById("parentTaskSelect");
+        
+        stationSelect.innerHTML = "";
+        taskSelect.innerHTML = "";
+        
+        stations.forEach((station, index) => {
+            let option = document.createElement("option");
+            option.value = index;
+            option.text = `${index + 1}. ${station}`;
+            stationSelect.appendChild(option);
+        });
+        
+        tasks.forEach((task, index) => {
+            let option = document.createElement("option");
+            option.value = index;
+            option.text = `第 ${index + 1} 關: [${task.section}] ${task.name}`;
+            taskSelect.appendChild(option);
+        });
+        
+        let finishOption = document.createElement("option");
+        finishOption.value = tasks.length;
+        finishOption.text = "🏆 所有關卡已完成";
+        taskSelect.appendChild(finishOption);
+    }
+
+    function checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const s = urlParams.get('station');
+        const t = urlParams.get('task');
+        if (s !== null && t !== null) {
+            currentStation = parseInt(s, 10);
+            currentTaskIndex = parseInt(t, 10);
+        } else {
+            loadProgress(); 
+        }
+    }
+
+    function copyShareLink() {
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?station=${currentStation}&task=${currentTaskIndex}`;
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert("連結已複製！現在可以傳給隊友，點開就會接續目前的進度喔！");
+        }).catch(err => {
+            prompt("請手動複製以下網址傳給神隊友：", shareUrl);
+        });
+    }
+
+    function updateUI(instantScroll = false) {
+        stations.forEach((_, index) => {
+            const el = document.getElementById(`station-${index}`);
+            if (!el) return;
+            el.className = "station-item";
+            if (index < currentStation) {
+                el.classList.add("passed");
+            } else if (index === currentStation) {
+                el.classList.add("active");
+            }
+        });
+
+        // 控制向上平滑或瞬間捲動
+        const mapEl = document.getElementById("mapContainer");
+        const activeStationEl = document.getElementById(`station-${currentStation}`);
+        
+        if (mapEl && activeStationEl) {
+            const elementRect = activeStationEl.getBoundingClientRect();
+            const containerRect = mapEl.getBoundingClientRect();
+            const offset = (elementRect.top - containerRect.top) - (mapEl.clientHeight / 2) + (elementRect.height / 2);
+            
+            mapEl.scrollBy({
+                top: offset,
+                behavior: instantScroll ? 'auto' : 'smooth'
+            });
+        }
+
+        if (currentTaskIndex >= tasks.length) {
+            showVictoryScreen();
+            return;
+        } else {
+            document.getElementById("victoryScreen").style.display = "none";
+            document.getElementById("taskSection").style.display = "block";
+        }
+
+        const currentTask = tasks[currentTaskIndex];
+        
+        let nextStationName = "終點站";
+        if (currentStation + 1 < stations.length) {
+            nextStationName = stations[currentStation + 1] + "站";
+        }
+
+        document.getElementById("sectionTag").innerText = `【${currentTask.section}】`;
+        document.getElementById("taskName").innerHTML = `第 ${currentTaskIndex + 1} 關：${currentTask.name}`;
+        document.getElementById("taskTime").innerHTML = `預計時間：${currentTask.timeText}`;
+    }
+
+    function showVictoryScreen() {
+        document.getElementById("victoryScreen").style.display = "flex";
+        document.getElementById("taskSection").style.display = "none";
+        playSound('victory');
+        
+        let msg = `晚上的任務全部順利完成啦！<br><br>小車長今天表現一級棒，把高鐵開到了<br><span style='font-size: 28px; color: #f37021; font-weight: bold; background: white; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-top: 10px;'>🚉 ${stations[currentStation]}站</span>！<br><br>`;
+        
+        if (currentStation >= stations.length - 1) {
+            msg += `哇！真的抵達了終點站 南港！<br>你是今天的超級特快車！`;
+        } else {
+            msg += `高鐵準備進站休息囉，<br>小車長也該去睡覺補眠了！<br>晚安！`;
+        }
+        document.getElementById("victoryMsg").innerHTML = msg;
+    }
+
+    // 手動完成任務
+    function completeTask(stationsToAdvance) {
+        if (stationsToAdvance === 2) {
+            playSound('victory'); 
+            showAlert("⚡ 高鐵加速！", "動作超迅速！獲得特快車獎勵，高鐵直接前進 2 站！", "#f37021");
+        } else {
+            playSound('success');
+        }
+
+        currentStation += stationsToAdvance; 
+        updateGameState();
+    }
+
+    function applyBonus(stationsToAdd) {
+        if (currentStation >= stations.length - 1) {
+            showAlert("已經抵達終點！", "小車長已經到達南港囉！可以準備去睡覺了，你超棒！", "#4CAF50");
+            return;
+        }
+        playSound('bonus');
+        
+        if (stationsToAdd === 1) {
+            showAlert("🎁 驚喜加碼！", "哇！獲得了驚喜獎勵，高鐵前進 1 站！", "#e91e63");
+        } else if (stationsToAdd === 2) {
+            showAlert("🚀 超級加碼！", "太厲害了吧！獲得超級獎勵，高鐵直線狂飆前進 2 站！", "#ff9800");
+        }
+        
+        currentStation += stationsToAdd;
+        
+        if (currentStation >= stations.length - 1) {
+            currentStation = stations.length - 1;
+        }
+        saveProgress();
+        updateUI();
+    }
+
+    function updateGameState() {
+        if (currentStation >= stations.length - 1) {
+            currentStation = stations.length - 1; 
+        }
+        currentTaskIndex += 1; 
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        updateUI();
+    }
+
+    function openParentSettings() {
+        document.getElementById("parentTaskSelect").value = currentTaskIndex;
+        document.getElementById("parentStationSelect").value = currentStation;
+        document.getElementById("parentSettingsModal").style.display = "flex";
+    }
+
+    function closeParentSettings() {
+        document.getElementById("parentSettingsModal").style.display = "none";
+    }
+
+    function applyParentSettings() {
+        const newTask = parseInt(document.getElementById("parentTaskSelect").value, 10);
+        const newStation = parseInt(document.getElementById("parentStationSelect").value, 10);
+        
+        currentTaskIndex = newTask;
+        currentStation = newStation;
+        
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // 傳入 true 讓修改後畫面瞬間滾動
+        updateUI(true);
+        closeParentSettings();
+    }
+
+    function showAlert(title, msg, titleColor) {
+        document.getElementById("alertTitle").innerText = title;
+        document.getElementById("alertTitle").style.color = titleColor;
+        document.getElementById("alertMsg").innerHTML = msg;
+        document.getElementById("customAlert").style.display = "flex";
+    }
+
+    function closeAlert() {
+        document.getElementById("customAlert").style.display = "none";
+    }
+
+    function resetGame(askConfirm) {
+        if (askConfirm && !confirm("確定要重新啟動高鐵，回到左營站並重設所有任務嗎？")) {
+            return;
+        }
+        currentStation = 0;      
+        currentTaskIndex = 0;    
+        saveProgress();
+        
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        updateUI(true); 
+    }
+
+    // 獨立存檔名稱，不跟捷運混淆
+    function saveProgress() {
+        localStorage.setItem("thsr_game_evening_station", currentStation);
+        localStorage.setItem("thsr_game_evening_task", currentTaskIndex);
+    }
+
+    function loadProgress() {
+        const savedStation = localStorage.getItem("thsr_game_evening_station");
+        const savedTask = localStorage.getItem("thsr_game_evening_task");
+        if (savedStation !== null && savedTask !== null) {
+            currentStation = parseInt(savedStation, 10);
+            currentTaskIndex = parseInt(savedTask, 10);
+            
+            if (currentStation >= stations.length) currentStation = stations.length - 1;
+            if (currentTaskIndex > tasks.length) currentTaskIndex = 0;
+        }
+    }
+
+    function playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            if (type === 'success') {
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); 
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12); 
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.24); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } else if (type === 'victory') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.6);
+            } else if (type === 'bonus') {
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); 
+                osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); 
+                osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.2); 
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            }
+        } catch (e) {
+            console.log("Audio not supported or blocked by browser");
+        }
+    }
+</script>
+
+</body>
+</html>
