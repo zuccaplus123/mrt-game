@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>捷運小車長 - 任務大廳</title>
+    <title>捷運與高鐵小車長 - 任務大廳</title>
     <style>
         * { box-sizing: border-box; }
         body {
             font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-            background-color: #e8f5e9; /* 清新的捷運綠底色 */
+            background-color: #e8f5e9; 
             margin: 0;
             padding: 20px;
             display: flex;
@@ -47,7 +47,7 @@
             font-weight: bold;
             padding: 25px 20px;
             border-radius: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
             overflow: hidden;
@@ -55,38 +55,46 @@
         .btn-link:active {
             transform: scale(0.96);
         }
-        /* 早安按鈕樣式 */
+        
+        /* 捷運早安按鈕 */
         .btn-morning {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
             box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
         }
-        /* 晚安按鈕樣式 */
+        /* 捷運晚安按鈕 */
         .btn-evening {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4);
         }
+        /* 新增：高鐵晚安按鈕 */
+        .btn-thsr {
+            background: linear-gradient(135deg, #f37021 0%, #ff9800 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(243, 112, 33, 0.4);
+        }
+        
         .icon {
-            font-size: 45px;
-            margin-bottom: 15px;
+            font-size: 40px;
+            margin-bottom: 10px;
             display: block;
             animation: float 3s ease-in-out infinite;
         }
         .sub-text {
             display: block;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: normal;
-            opacity: 0.9;
+            opacity: 0.95;
             margin-top: 8px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.25);
             padding: 4px 10px;
             border-radius: 10px;
             display: inline-block;
         }
         .train-animation {
-            font-size: 60px;
-            margin-bottom: 15px;
+            font-size: 55px;
+            margin-bottom: 10px;
             display: inline-block;
             animation: bounce 2s infinite ease-in-out;
         }
@@ -104,20 +112,29 @@
 <body>
 
     <div class="container">
-        <div class="train-animation">🚉</div>
-        <div class="title">捷運小車長大廳</div>
-        <div class="subtitle">歡迎光臨！這是為我們家 4 歲專屬小車長設計的挑戰路線。請選擇現在要搭乘的列車：</div>
+        <div class="train-animation">🚉🚄</div>
+        <div class="title">任務大廳</div>
+        <div class="subtitle">歡迎光臨！請為小車長選擇今天的搭乘路線：</div>
         
+        <!-- 路線 1：早上捷運 -->
         <a href="morning.html" class="btn-link btn-morning">
             <span class="icon">☀️</span>
-            早安特快車
-            <span class="sub-text">往 北屯總站 ⬆️</span>
+            捷運早安特快車
+            <span class="sub-text">高鐵站 ➔ 北屯總站 ⬆️</span>
         </a>
         
+        <!-- 路線 2：晚上高鐵 (阿嬤家到回家) -->
+        <a href="thsr-evening.html" class="btn-link btn-thsr">
+            <span class="icon">🚄</span>
+            高鐵晚安號 (阿嬤家)
+            <span class="sub-text">左營 ➔ 南港 ⬇️</span>
+        </a>
+
+        <!-- 路線 3：晚上捷運 (原本的晚上版) -->
         <a href="evening.html" class="btn-link btn-evening">
             <span class="icon">🌙</span>
-            晚安區間車
-            <span class="sub-text">往 高鐵臺中站 ⬇️</span>
+            捷運晚安區間車
+            <span class="sub-text">北屯總站 ➔ 高鐵站 ⬇️</span>
         </a>
     </div>
 
