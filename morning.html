@@ -36,7 +36,7 @@
             letter-spacing: 1px;
         }
         
-        /* 任務區 (移除計時器，改為強調任務) */
+        /* 任務區 (無計時器，加入時間文字顯示) */
         .task-box {
             background: #fff8e1;
             border: 2px solid #ffe082;
@@ -48,8 +48,19 @@
             font-size: 20px;
             font-weight: bold;
             color: #e65100;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             line-height: 1.4;
+        }
+        .task-duration {
+            font-size: 18px;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: white;
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            border: 1px dashed #ffb74d;
         }
         
         /* 手動過關按鈕調整 */
@@ -274,6 +285,7 @@
     
     <div class="task-box" id="taskSection">
         <div class="current-task-name" id="taskName">準備出發！</div>
+        <div class="task-duration" id="taskTime">預計時間：-- 分鐘</div>
         
         <div class="completion-buttons">
             <button class="btn-advance-1" onclick="completeTask(1)">✅ 順利過關 (前進 1 站)</button>
@@ -308,6 +320,7 @@
     <button class="btn-restart" onclick="resetGame(true)">準備開心去上學！</button>
 </div>
 
+<!-- 系統提示彈窗 -->
 <div class="custom-alert" id="customAlert">
     <div class="alert-box">
         <div class="alert-title" id="alertTitle">提示</div>
@@ -316,6 +329,7 @@
     </div>
 </div>
 
+<!-- 家長設定專屬彈窗 -->
 <div class="custom-alert" id="parentSettingsModal">
     <div class="alert-box">
         <div class="alert-title" style="color: #607d8b;">⚙️ 家長手動設定</div>
@@ -334,14 +348,15 @@
 </div>
 
 <script>
+    // 加上 timeText 屬性來顯示預計時間
     const tasks = [
-        { name: "上廁所 + 捲尿布" },
-        { name: "吃早餐" },
-        { name: "收碗、擦桌子" },
-        { name: "大便" },
-        { name: "刷牙、洗臉" },
-        { name: "換衣服" },
-        { name: "收書包" }
+        { name: "上廁所 + 捲尿布", timeText: "5 分鐘" },
+        { name: "吃早餐", timeText: "20 分鐘" },
+        { name: "收碗、洗抹布、擦桌子", timeText: "6 分鐘" },
+        { name: "大便", timeText: "10 分鐘" },
+        { name: "刷牙、洗臉", timeText: "5 分鐘" },
+        { name: "換衣服", timeText: "5 分鐘" },
+        { name: "收書包", timeText: "6 分鐘" }
     ];
 
     const stations = [
@@ -399,7 +414,7 @@
         tasks.forEach((task, index) => {
             let option = document.createElement("option");
             option.value = index;
-            option.text = `第 ${index + 1} 關: ${task.name}`;
+            option.text = `第 ${index + 1} 關: ${task.name} (${task.timeText})`;
             taskSelect.appendChild(option);
         });
         
@@ -475,6 +490,7 @@
         }
 
         document.getElementById("taskName").innerHTML = `<b>目前停靠：</b>${stations[currentStation]}站<br><span style="font-size:15px; color:#555;">(下一站目標：${nextStationName})</span><br><br>🎯 第 ${currentTaskIndex + 1} 關：${currentTask.name}`;
+        document.getElementById("taskTime").innerHTML = `預計時間：${currentTask.timeText}`;
     }
 
     function showVictoryScreen() {
