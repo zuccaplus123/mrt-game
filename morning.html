@@ -517,7 +517,7 @@
         document.getElementById("victoryMsg").innerHTML = msg;
     }
 
-    // 負責連貫播放 閘門音效 + 進站廣播
+// 負責連貫播放 閘門音效 + 進站廣播
     function playGateAndStationAudio(gateType, stationIndex) {
         if (currentAudio) {
             currentAudio.pause();
@@ -529,9 +529,8 @@
         
         // 閘門音效播放完畢後，接續播放進站音樂
         currentAudio.onended = () => {
-            // 將 index 0~17 轉換成 "01.mp3" 到 "18.mp3"
-            const stationNum = String(stationIndex + 1).padStart(2, '0');
-            const stationFile = `${stationNum}.mp3`;
+            // 將所有進站音樂統一改成 "06.mp3"
+            const stationFile = '06.mp3';
             
             currentAudio = new Audio(stationFile);
             currentAudio.play().catch(e => console.log("進站音樂播放失敗或被阻擋:", e));
