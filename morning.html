@@ -505,7 +505,13 @@
     function showVictoryScreen() {
         document.getElementById("victoryScreen").style.display = "flex";
         document.getElementById("taskSection").style.display = "none";
-        playSound('victory'); // 勝利保持原生音效
+        // 播放通關專屬音檔 end.mp3
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+        }
+        currentAudio = new Audio('end.mp3');
+        currentAudio.play().catch(e => console.log("通關音樂播放失敗或被阻擋:", e));
         
         let msg = `早上的出門準備順利完成啦！<br><br>小車長今天表現一級棒，把捷運開到了<br><span style='font-size: 28px; color: #4CAF50; font-weight: bold; background: white; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-top: 10px;'>🚉 ${stations[currentStation]}站</span>！<br><br>`;
         
