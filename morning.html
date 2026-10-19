@@ -63,7 +63,7 @@
             border: 1px dashed #ffb74d;
         }
         
-        /* 手動過關按鈕調整 */
+        /* 手動過關按鈕 */
         .completion-buttons {
             display: flex;
             flex-direction: column;
@@ -94,13 +94,6 @@
             width: 100%; 
             font-size: 18px; 
             box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
-        }
-        .btn-advance-hero {
-            background: #9c27b0; 
-            color: white; 
-            width: 100%; 
-            font-size: 18px; 
-            box-shadow: 0 4px 10px rgba(156, 39, 176, 0.3);
         }
         .btn-advance-3 {
             background: #e0e0e0;
@@ -203,27 +196,29 @@
             padding-top: 15px;
         }
         
+        /* 簡化並排加碼按鈕：各自佔 50% 寬度 */
         .btn-bonus-group {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             gap: 10px;
             margin-bottom: 12px;
         }
         .btn-bonus {
             color: white;
             font-size: 16px;
-            padding: 12px 15px;
+            padding: 12px 10px;
             border-radius: 10px;
             display: block;
-            width: 100%;
+            flex: 1;
+            width: 50%;
         }
         .btn-bonus-1 {
             background: #ff5252;
             box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
         }
         .btn-bonus-2 {
-            background: #00bcd4;
-            box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);
+            background: #ff9800;
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
@@ -303,7 +298,6 @@
         <div class="completion-buttons">
             <button class="btn-advance-1" onclick="completeTask(1)">✅ 順利過關 (前進 1 站)</button>
             <button class="btn-advance-2" onclick="completeTask(2)">⚡ 預計時間一半內完成 (前進 2 站)</button>
-            <button class="btn-advance-hero" onclick="completeTask(3)">🦸 英雄突出行為 (前進 3 站)</button>
             <button class="btn-advance-3" onclick="failTask()">💨 下一站再努力</button>
         </div>
     </div>
@@ -316,9 +310,8 @@
     
     <div class="action-area">
         <div class="btn-bonus-group">
-            <button class="btn-bonus btn-bonus-1" onclick="applyBonus(1, '抹布')">🌟 加碼：抹布擰乾 (+1 站)</button>
-            <button class="btn-bonus btn-bonus-1" onclick="applyBonus(1, '衣服')">👕 加碼：自己把衣服穿好 (+1 站)</button>
-            <button class="btn-bonus btn-bonus-2" onclick="applyBonus(1, '咒語')">🪄 神奇咒語：主動求救不生氣 (+1 站)</button>
+            <button class="btn-bonus btn-bonus-1" onclick="applyBonus(1)">🌟 加碼 1 站</button>
+            <button class="btn-bonus btn-bonus-2" onclick="applyBonus(2)">🚀 加碼 2 站</button>
         </div>
         
         <div class="bottom-btn-group">
@@ -364,7 +357,6 @@
 </div>
 
 <script>
-    // 你的全新 9 大早晨任務
     const tasks = [
         { name: "上廁所（不穿尿布）", timeText: "2 分鐘" },
         { name: "倒牛奶與微波", timeText: "5 分鐘" },
@@ -387,7 +379,8 @@
     let currentStation = 0;   
     let currentTaskIndex = 0; 
     let currentAudio = null; 
-    let totalStationsAdvanced = 0; // 新增：用來記錄總共前進的站數（集點用）
+    let totalStationsAdvanced = 0; // 累積前進站數（集點用）
+    let direction = 1; // 1: 往北屯總站前進, -1: 往高鐵臺中站折返
 
     window.onload = function() {
         checkUrlParams();
@@ -446,9 +439,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const s = urlParams.get('station');
         const t = urlParams.get('task');
+        const d = urlParams.get('dir');
         if (s !== null && t !== null) {
             currentStation = parseInt(s, 10);
             currentTaskIndex = parseInt(t, 10);
+            if (d !== null) direction = parseInt(d, 10);
         } else {
             loadProgress(); 
         }
@@ -456,13 +451,40 @@
 
     function copyShareLink() {
         const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?station=${currentStation}&task=${currentTaskIndex}`;
+        const shareUrl = `${baseUrl}?station=${currentStation}&task=${currentTaskIndex}&dir=${direction}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
             alert("連結已複製！現在可以傳給隊友，點開就會接續目前的進度喔！");
         }).catch(err => {
             prompt("請手動複製以下網址傳給神隊友：", shareUrl);
         });
+    }
+
+    // 推進車站（支援觸頂自動折返）
+    function advanceTrain(steps) {
+        for (let i = 0; i < steps; i++) {
+            if (direction === 1) {
+                if (currentStation < stations.length - 1) {
+                    currentStation++;
+                } else {
+                    direction = -1;
+                    currentStation--;
+                }
+            } else {
+                if (currentStation > 0) {
+                    currentStation--;
+                } else {
+                    direction = 1;
+                    currentStation++;
+                }
+            }
+            // 邊界確認
+            if (currentStation === stations.length - 1) {
+                direction = -1;
+            } else if (currentStation === 0) {
+                direction = 1;
+            }
+        }
     }
 
     function updateUI(instantScroll = false) {
@@ -501,9 +523,20 @@
 
         const currentTask = tasks[currentTaskIndex];
         
-        let nextStationName = "終點站";
-        if (currentStation + 1 < stations.length) {
-            nextStationName = stations[currentStation + 1] + "站";
+        // 算下一站目標名稱（考量折返狀況）
+        let nextStationName = "";
+        if (direction === 1) {
+            if (currentStation + 1 < stations.length) {
+                nextStationName = stations[currentStation + 1] + "站";
+            } else {
+                nextStationName = stations[currentStation - 1] + "站 (折返往高鐵)";
+            }
+        } else {
+            if (currentStation - 1 >= 0) {
+                nextStationName = stations[currentStation - 1] + "站 (往高鐵)";
+            } else {
+                nextStationName = stations[currentStation + 1] + "站 (折返往北屯)";
+            }
         }
 
         document.getElementById("taskName").innerHTML = `<b>目前停靠：</b>${stations[currentStation]}站<br><span style="font-size:15px; color:#555;">(下一站目標：${nextStationName})</span><br><br>🎯 第 ${currentTaskIndex + 1} 關：${currentTask.name}`;
@@ -514,7 +547,6 @@
         document.getElementById("victoryScreen").style.display = "flex";
         document.getElementById("taskSection").style.display = "none";
         
-        // 播放通關專屬音檔 end.mp3
         if (currentAudio) {
             currentAudio.pause();
             currentAudio.currentTime = 0;
@@ -524,22 +556,17 @@
         
         let msg = `早上的出門準備順利完成啦！<br><br>小車長把捷運開到了<span style='font-size: 28px; color: #4CAF50; font-weight: bold; background: white; padding: 5px 10px; border-radius: 10px; display: inline-block; margin-top: 10px;'>🚉 ${stations[currentStation]}站</span>！<br><br>`;
         
-        // 集點結算區塊
         msg += `<div style="background: #fff8e1; border: 2px dashed #ff9800; padding: 15px; border-radius: 15px; margin: 15px 0;">`;
         msg += `<span style="font-size: 20px; color: #e65100; font-weight: bold;">🎯 今日結算 🎯</span><br><br>`;
         msg += `<span style="font-size: 24px; color: #333;">總共前進了 <b>${totalStationsAdvanced}</b> 站！</span><br>`;
         msg += `<span style="font-size: 16px; color: #757575;">(可以轉換成獎勵點數喔！)</span>`;
         msg += `</div>`;
 
-        if (currentStation >= stations.length - 1) {
-            msg += `哇！真的飆到了終點站 北屯總站！<br>你是今天的超級特快車！`;
-        } else {
-            msg += `出門不遲到就是最棒的！<br>我們現在可以開心地出門囉！`;
-        }
+        msg += `出門不遲到就是最棒的！<br>我們現在可以開心地出門囉！`;
         document.getElementById("victoryMsg").innerHTML = msg;
     }
 
-    // 負責連貫播放 閘門音效 + 進站廣播
+    // 播放 閘門音效 + 進站廣播
     function playGateAndStationAudio(gateType, stationIndex) {
         if (currentAudio) {
             currentAudio.pause();
@@ -566,17 +593,10 @@
         if (stationsToAdvance === 2) {
             gateType = 'fast';
             showAlert("⚡ 超快速完成！", "在預計時間的一半內完成任務，獲得特快車獎勵，捷運前進 2 站！", "#ff9800");
-        } else if (stationsToAdvance === 3) {
-            gateType = 'fast';
-            showAlert("🦸 英雄突出行為！", "有非常突出的好行為！超級英雄獎勵，捷運直線狂飆前進 3 站！", "#9c27b0");
         }
 
-        currentStation += stationsToAdvance; 
-        totalStationsAdvanced += stationsToAdvance; // 累積點數
-
-        if (currentStation >= stations.length - 1) {
-            currentStation = stations.length - 1; 
-        }
+        advanceTrain(stationsToAdvance);
+        totalStationsAdvanced += stationsToAdvance; 
 
         playGateAndStationAudio(gateType, currentStation);
         updateGameState();
@@ -585,28 +605,21 @@
     // 失敗 / 下一站再努力
     function failTask() {
         playSound('fail'); 
-        // 不加點數、不前進，直接換下一關
         updateGameState(); 
     }
 
     // 手動加碼獎勵
-    function applyBonus(stationsToAdd, bonusType) {
+    function applyBonus(stationsToAdd) {
         let gateType = 'pass';
-        if (bonusType === '抹布') {
-            showAlert("🌟 抹布擰乾", "很棒喔！有把抹布擰乾，加碼前進 1 站！", "#e91e63");
-        } else if (bonusType === '衣服') {
-            showAlert("👕 衣服穿好", "自己把衣服穿好，超厲害！加碼前進 1 站！", "#4CAF50");
-        } else if (bonusType === '咒語') {
-            gateType = 'fast'; // 神奇咒語很棒，給他聽快的閘門聲
-            showAlert("🪄 神奇咒語", "遇到卡關沒有生氣發呆，而是主動說出神奇咒語尋求幫忙，情緒控制超棒！加碼前進 1 站！", "#00bcd4");
+        if (stationsToAdd === 1) {
+            showAlert("🌟 加碼 1 站", "太棒了！獲得獎勵加碼，捷運前進 1 站！", "#e91e63");
+        } else if (stationsToAdd === 2) {
+            gateType = 'fast';
+            showAlert("🚀 加碼 2 站", "太厲害了！獲得超級獎勵，捷運前進 2 站！", "#ff9800");
         }
         
-        currentStation += stationsToAdd;
-        totalStationsAdvanced += stationsToAdd; // 累積點數
-        
-        if (currentStation >= stations.length - 1) {
-            currentStation = stations.length - 1;
-        }
+        advanceTrain(stationsToAdd);
+        totalStationsAdvanced += stationsToAdd; 
         
         playGateAndStationAudio(gateType, currentStation);
         
@@ -615,9 +628,6 @@
     }
 
     function updateGameState() {
-        if (currentStation >= stations.length - 1) {
-            currentStation = stations.length - 1; 
-        }
         currentTaskIndex += 1; 
         saveProgress();
         
@@ -643,6 +653,12 @@
         
         currentTaskIndex = newTask;
         currentStation = newStation;
+        
+        if (currentStation === stations.length - 1) {
+            direction = -1;
+        } else if (currentStation === 0) {
+            direction = 1;
+        }
         
         saveProgress();
         
@@ -670,7 +686,8 @@
         }
         currentStation = 0;      
         currentTaskIndex = 0;  
-        totalStationsAdvanced = 0; // 點數歸零  
+        totalStationsAdvanced = 0; 
+        direction = 1;
         saveProgress();
         
         const newUrl = window.location.origin + window.location.pathname;
@@ -683,12 +700,14 @@
         localStorage.setItem("mrt_game_morning_station", currentStation);
         localStorage.setItem("mrt_game_morning_task", currentTaskIndex);
         localStorage.setItem("mrt_game_morning_total", totalStationsAdvanced);
+        localStorage.setItem("mrt_game_morning_dir", direction);
     }
 
     function loadProgress() {
         const savedStation = localStorage.getItem("mrt_game_morning_station");
         const savedTask = localStorage.getItem("mrt_game_morning_task");
         const savedTotal = localStorage.getItem("mrt_game_morning_total");
+        const savedDir = localStorage.getItem("mrt_game_morning_dir");
         
         if (savedStation !== null && savedTask !== null) {
             currentStation = parseInt(savedStation, 10);
@@ -696,13 +715,15 @@
             if (savedTotal !== null) {
                 totalStationsAdvanced = parseInt(savedTotal, 10);
             }
+            if (savedDir !== null) {
+                direction = parseInt(savedDir, 10);
+            }
             
             if (currentStation >= stations.length) currentStation = stations.length - 1;
             if (currentTaskIndex > tasks.length) currentTaskIndex = 0;
         }
     }
 
-    // 原生 Web Audio API 提示音效 (只留下失敗音效，勝利已改為外部 end.mp3)
     function playSound(type) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
